@@ -1,76 +1,50 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import SkillCard from "@/components/SkillCard";
-import { Search, Filter, MapPin, Clock } from "lucide-react";
+import { Search, Filter, MapPin, Clock, Loader2 } from "lucide-react";
+import { fetchPublicProfiles } from "@/api/browse";
 
 const Browse = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedLocation, setSelectedLocation] = useState("all");
   const [selectedSkill, setSelectedSkill] = useState("all");
+  const [users, setUsers] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-  // Sample data - in real app this would come from your backend
-  const users = [
-    {
-      id: 1,
-      user: {
-        name: "Sarah Chen",
-        avatar: undefined,
-        location: "San Francisco, CA",
-        rating: 4.9,
-        reviewCount: 23
-      },
-      skillsOffered: ["Photoshop", "Illustrator", "Brand Design", "Logo Design"],
-      skillsWanted: ["React Development", "JavaScript", "Frontend"],
-      availability: ["Weekends", "Evenings"],
-      isPublic: true
-    },
-    {
-      id: 2,
-      user: {
-        name: "Mike Johnson",
-        avatar: undefined,
-        location: "New York, NY",
-        rating: 4.7,
-        reviewCount: 18
-      },
-      skillsOffered: ["Spanish Tutoring", "Translation", "Cultural Consulting"],
-      skillsWanted: ["Photography", "Video Editing", "Content Creation"],
-      availability: ["Weekday Mornings", "Weekends"],
-      isPublic: true
-    },
-    {
-      id: 3,
-      user: {
-        name: "Emma Wilson",
-        avatar: undefined,
-        location: "Los Angeles, CA",
-        rating: 4.8,
-        reviewCount: 31
-      },
-      skillsOffered: ["Web Design", "UI/UX", "Figma", "Prototyping"],
-      skillsWanted: ["Marketing", "SEO", "Content Strategy"],
-      availability: ["Flexible"],
-      isPublic: true
-    },
-    {
-      id: 4,
-      user: {
-        name: "David Kim",
-        avatar: undefined,
-        location: "Seattle, WA",
-        rating: 4.6,
-        reviewCount: 12
-      },
-      skillsOffered: ["Python", "Data Analysis", "Machine Learning", "Statistics"],
-      skillsWanted: ["Public Speaking", "Presentation Skills", "Leadership"],
-      availability: ["Evenings", "Weekends"],
-      isPublic: true
-    }
-  ];
+  useEffect(() => {
+    const getProfiles = async () => {
+      setIsLoading(true);
+      const { profiles, error } = await fetchPublicProfiles();
+      if (error) {
+        setError(error);
+      } else {
+        setUsers(profiles);
+      }
+      setIsLoading(false);
+    };
+
+    getProfiles();
+  }, []);
+
+  // Your filter logic remains the same, but now it operates on the fetched data
+  const filteredUsers = users.filter(user => {
+    const matchesSearch = searchQuery === "" || 
+      user.skillsOffered.some(skill => skill.toLowerCase().includes(searchQuery.toLowerCase())) ||
+      user.skillsWanted.some(skill => skill.toLowerCase().includes(searchQuery.toLowerCase())) ||
+      user.user.name.toLowerCase().includes(searchQuery.toLowerCase());
+    
+    const matchesLocation = selectedLocation === "all" || user.user.location === selectedLocation;
+    const matchesSkill = selectedSkill === "all" || 
+      user.skillsOffered.some(skill => skill === selectedSkill) ||
+      user.skillsWanted.some(skill => skill === selectedSkill);
+    
+    return matchesSearch && matchesLocation && matchesSkill;
+  });
 
   const popularSkills = [
     "React Development", "Photoshop", "Spanish", "Photography", "UI/UX Design",
@@ -78,20 +52,23 @@ const Browse = () => {
   ];
 
   const locations = ["San Francisco, CA", "New York, NY", "Los Angeles, CA", "Seattle, WA", "Austin, TX"];
+  
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gradient-subtle flex items-center justify-center">
+        <Loader2 className="h-10 w-10 animate-spin text-muted-foreground" />
+        <p className="text-xl text-muted-foreground ml-4">Loading profiles...</p>
+      </div>
+    );
+  }
 
-  const filteredUsers = users.filter(user => {
-    const matchesSearch = searchQuery === "" || 
-      user.skillsOffered.some(skill => skill.toLowerCase().includes(searchQuery.toLowerCase())) ||
-      user.skillsWanted.some(skill => skill.toLowerCase().includes(searchQuery.toLowerCase())) ||
-      user.user.name.toLowerCase().includes(searchQuery.toLowerCase());
-    
-    const matchesLocation = selectedLocation === "" || selectedLocation === "all" || user.user.location === selectedLocation;
-    const matchesSkill = selectedSkill === "" || selectedSkill === "all" || 
-      user.skillsOffered.some(skill => skill === selectedSkill) ||
-      user.skillsWanted.some(skill => skill === selectedSkill);
-    
-    return matchesSearch && matchesLocation && matchesSkill;
-  });
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gradient-subtle flex items-center justify-center">
+        <p className="text-xl text-red-500">Error: {error.message}</p>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-subtle">

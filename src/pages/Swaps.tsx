@@ -1,59 +1,90 @@
+import { useState, useEffect } from 'react';
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { MessageSquare, Clock, CheckCircle, XCircle, Star } from "lucide-react";
+import { MessageSquare, Clock, CheckCircle, XCircle, Star, Loader2 } from "lucide-react";
+import { fetchUserSwaps, acceptSwap, declineSwap, cancelSwap, completeSwap } from '@/api/swap';
 
 const Swaps = () => {
-  const pendingRequests = [
-    {
-      id: 1,
-      requester: "Sarah Chen",
-      avatar: undefined,
-      skillOffered: "Photoshop",
-      skillWanted: "React Development",
-      message: "Hi! I'd love to trade my Photoshop skills for some React help. I'm working on a portfolio project.",
-      time: "2 hours ago",
-      type: "incoming"
-    },
-    {
-      id: 2,
-      requester: "Mike Johnson",
-      avatar: undefined,
-      skillOffered: "Spanish Tutoring",
-      skillWanted: "Photography",
-      message: "Looking to improve my photography skills. Happy to help with Spanish in return!",
-      time: "1 day ago",
-      type: "outgoing"
-    }
-  ];
+  const [pendingRequests, setPendingRequests] = useState([]);
+  const [activeSwaps, setActiveSwaps] = useState([]);
+  const [completedSwaps, setCompletedSwaps] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-  const activeSwaps = [
-    {
-      id: 1,
-      partner: "Emma Wilson",
-      avatar: undefined,
-      skillOffered: "Web Design",
-      skillWanted: "Marketing",
-      startDate: "2024-01-15",
-      nextSession: "Today, 3:00 PM",
-      progress: 60
+  const refreshSwaps = async () => {
+    setIsLoading(true);
+    const { data, error } = await fetchUserSwaps();
+    if (error) {
+      setError("Failed to fetch swaps. Please try again.");
+      setIsLoading(false);
+      return;
     }
-  ];
 
-  const completedSwaps = [
-    {
-      id: 1,
-      partner: "David Kim",
-      avatar: undefined,
-      skillOffered: "Python",
-      skillWanted: "Public Speaking",
-      completedDate: "2024-01-10",
-      rating: 5,
-      feedback: "Excellent teacher! Very patient and knowledgeable."
+    setPendingRequests(data.filter(swap => swap.status === 'pending'));
+    setActiveSwaps(data.filter(swap => swap.status === 'active'));
+    setCompletedSwaps(data.filter(swap => swap.status === 'completed'));
+    setIsLoading(false);
+  };
+
+  useEffect(() => {
+    refreshSwaps();
+  }, []); // Empty dependency array as there is no local userId state
+
+  const handleAccept = async (swapId: string) => {
+    const { error } = await acceptSwap(swapId);
+    if (error) {
+      setError("Failed to accept request.");
+    } else {
+      refreshSwaps();
     }
-  ];
+  };
+
+  const handleDecline = async (swapId: string) => {
+    const { error } = await declineSwap(swapId);
+    if (error) {
+      setError("Failed to decline request.");
+    } else {
+      refreshSwaps();
+    }
+  };
+
+  const handleCancel = async (swapId: string) => {
+    const { error } = await cancelSwap(swapId);
+    if (error) {
+      setError("Failed to cancel request.");
+    } else {
+      refreshSwaps();
+    }
+  };
+
+  const handleComplete = async (swapId: string, rating: number, feedback: string) => {
+    const { error } = await completeSwap(swapId, rating, feedback);
+    if (error) {
+      setError("Failed to complete swap.");
+    } else {
+      refreshSwaps();
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gradient-subtle flex items-center justify-center">
+        <Loader2 className="h-10 w-10 animate-spin text-muted-foreground" />
+        <p className="text-xl text-muted-foreground ml-4">Loading swaps...</p>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gradient-subtle flex items-center justify-center">
+        <p className="text-xl text-red-500">Error: {error}</p>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-subtle">
@@ -101,14 +132,14 @@ const Swaps = () => {
                     <div className="flex items-start justify-between">
                       <div className="flex items-center gap-4">
                         <Avatar className="h-12 w-12">
-                          <AvatarImage src={request.avatar} />
+                          <AvatarImage src={request.partner.avatar_url} />
                           <AvatarFallback className="bg-gradient-primary text-primary-foreground">
-                            {request.requester.split(' ').map(n => n[0]).join('')}
+                            {request.partner.full_name?.split(' ').map(n => n[0]).join('')}
                           </AvatarFallback>
                         </Avatar>
                         <div>
-                          <CardTitle className="text-lg">{request.requester}</CardTitle>
-                          <CardDescription>{request.time}</CardDescription>
+                          <CardTitle className="text-lg">{request.partner.full_name}</CardTitle>
+                          <CardDescription>{new Date(request.created_at).toLocaleDateString()}</CardDescription>
                         </div>
                       </div>
                       <Badge variant={request.type === 'incoming' ? 'default' : 'secondary'}>
@@ -121,26 +152,28 @@ const Swaps = () => {
                       <div className="flex-1">
                         <p className="text-sm text-muted-foreground">Offering</p>
                         <Badge variant="default" className="bg-gradient-primary">
-                          {request.skillOffered}
+                          {request.skill_offered}
                         </Badge>
                       </div>
                       <div className="text-muted-foreground">⇄</div>
                       <div className="flex-1">
                         <p className="text-sm text-muted-foreground">Wanting</p>
                         <Badge variant="outline" className="border-accent text-accent">
-                          {request.skillWanted}
+                          {request.skill_wanted}
                         </Badge>
                       </div>
                     </div>
-                    <p className="text-sm text-foreground bg-card p-3 rounded-lg border">
-                      "{request.message}"
-                    </p>
+                    {request.message && (
+                      <p className="text-sm text-foreground bg-card p-3 rounded-lg border">
+                        "{request.message}"
+                      </p>
+                    )}
                     {request.type === 'incoming' ? (
                       <div className="flex gap-2">
                         <Button 
                           variant="default" 
                           className="flex-1"
-                          onClick={() => console.log(`Accepted swap request from ${request.requester}`)}
+                          onClick={() => handleAccept(request.id)}
                         >
                           <CheckCircle className="h-4 w-4 mr-2" />
                           Accept
@@ -148,7 +181,7 @@ const Swaps = () => {
                         <Button 
                           variant="outline" 
                           className="flex-1"
-                          onClick={() => console.log(`Declined swap request from ${request.requester}`)}
+                          onClick={() => handleDecline(request.id)}
                         >
                           <XCircle className="h-4 w-4 mr-2" />
                           Decline
@@ -159,14 +192,14 @@ const Swaps = () => {
                         <Button 
                           variant="outline" 
                           className="flex-1"
-                          onClick={() => console.log(`Edit request to ${request.requester}`)}
+                          onClick={() => console.log(`Edit request to ${request.partner.full_name}`)}
                         >
                           Edit Request
                         </Button>
                         <Button 
                           variant="destructive" 
                           className="flex-1"
-                          onClick={() => console.log(`Cancel request to ${request.requester}`)}
+                          onClick={() => handleCancel(request.id)}
                         >
                           Cancel Request
                         </Button>
@@ -195,14 +228,14 @@ const Swaps = () => {
                   <CardHeader>
                     <div className="flex items-center gap-4">
                       <Avatar className="h-12 w-12">
-                        <AvatarImage src={swap.avatar} />
+                        <AvatarImage src={swap.partner.avatar_url} />
                         <AvatarFallback className="bg-gradient-primary text-primary-foreground">
-                          {swap.partner.split(' ').map(n => n[0]).join('')}
+                          {swap.partner.full_name?.split(' ').map(n => n[0]).join('')}
                         </AvatarFallback>
                       </Avatar>
                       <div className="flex-1">
-                        <CardTitle className="text-lg">{swap.partner}</CardTitle>
-                        <CardDescription>Started {swap.startDate}</CardDescription>
+                        <CardTitle className="text-lg">{swap.partner.full_name}</CardTitle>
+                        <CardDescription>Started {new Date(swap.start_date).toLocaleDateString()}</CardDescription>
                       </div>
                       <Badge variant="default" className="bg-green-100 text-green-700 border-green-200">
                         Active
@@ -212,44 +245,52 @@ const Swaps = () => {
                   <CardContent className="space-y-4">
                     <div className="flex items-center gap-4 p-4 bg-muted/30 rounded-lg">
                       <div className="flex-1">
-                        <p className="text-sm text-muted-foreground">Teaching</p>
+                        <p className="text-sm text-muted-foreground">Taught</p>
                         <Badge variant="default" className="bg-gradient-primary">
-                          {swap.skillWanted}
+                          {swap.skill_wanted}
                         </Badge>
                       </div>
                       <div className="text-muted-foreground">⇄</div>
                       <div className="flex-1">
-                        <p className="text-sm text-muted-foreground">Learning</p>
+                        <p className="text-sm text-muted-foreground">Learned</p>
                         <Badge variant="outline" className="border-accent text-accent">
-                          {swap.skillOffered}
+                          {swap.skill_offered}
                         </Badge>
                       </div>
                     </div>
                     <div className="space-y-2">
                       <div className="flex justify-between text-sm">
                         <span>Progress</span>
-                        <span>{swap.progress}%</span>
+                        <span>0% (To be implemented)</span>
                       </div>
                       <div className="h-2 bg-muted rounded-full overflow-hidden">
                         <div 
                           className="h-full bg-gradient-primary transition-all duration-300"
-                          style={{ width: `${swap.progress}%` }}
+                          style={{ width: '0%' }}
                         />
                       </div>
                     </div>
                     <div className="flex items-center justify-between p-3 bg-accent/10 rounded-lg">
                       <div>
                         <p className="text-sm font-medium">Next Session</p>
-                        <p className="text-sm text-muted-foreground">{swap.nextSession}</p>
+                        <p className="text-sm text-muted-foreground">Not set yet</p>
                       </div>
                       <Button 
                         variant="accent"
-                        onClick={() => console.log(`Message ${swap.partner}`)}
+                        onClick={() => console.log(`Message ${swap.partner.full_name}`)}
                       >
                         <MessageSquare className="h-4 w-4 mr-2" />
                         Message
                       </Button>
                     </div>
+                    <Button 
+                      variant="default"
+                      className="w-full"
+                      onClick={() => handleComplete(swap.id, 5, "Great learning experience!")}
+                    >
+                      <CheckCircle className="h-4 w-4 mr-2" />
+                      Mark as Completed
+                    </Button>
                   </CardContent>
                 </Card>
               ))
@@ -273,14 +314,14 @@ const Swaps = () => {
                   <CardHeader>
                     <div className="flex items-center gap-4">
                       <Avatar className="h-12 w-12">
-                        <AvatarImage src={swap.avatar} />
+                        <AvatarImage src={swap.partner.avatar_url} />
                         <AvatarFallback className="bg-gradient-primary text-primary-foreground">
-                          {swap.partner.split(' ').map(n => n[0]).join('')}
+                          {swap.partner.full_name?.split(' ').map(n => n[0]).join('')}
                         </AvatarFallback>
                       </Avatar>
                       <div className="flex-1">
-                        <CardTitle className="text-lg">{swap.partner}</CardTitle>
-                        <CardDescription>Completed {swap.completedDate}</CardDescription>
+                        <CardTitle className="text-lg">{swap.partner.full_name}</CardTitle>
+                        <CardDescription>Completed {new Date(swap.completed_date).toLocaleDateString()}</CardDescription>
                       </div>
                       <div className="flex items-center gap-1">
                         {[...Array(5)].map((_, i) => (
@@ -297,21 +338,23 @@ const Swaps = () => {
                       <div className="flex-1">
                         <p className="text-sm text-muted-foreground">Taught</p>
                         <Badge variant="default" className="bg-gradient-primary">
-                          {swap.skillWanted}
+                          {swap.skill_wanted}
                         </Badge>
                       </div>
                       <div className="text-muted-foreground">⇄</div>
                       <div className="flex-1">
                         <p className="text-sm text-muted-foreground">Learned</p>
                         <Badge variant="outline" className="border-accent text-accent">
-                          {swap.skillOffered}
+                          {swap.skill_offered}
                         </Badge>
                       </div>
                     </div>
-                    <div className="p-3 bg-card rounded-lg border">
-                      <p className="text-sm text-muted-foreground mb-1">Feedback</p>
-                      <p className="text-sm">"{swap.feedback}"</p>
-                    </div>
+                    {swap.feedback && (
+                      <div className="p-3 bg-card rounded-lg border">
+                        <p className="text-sm text-muted-foreground mb-1">Feedback</p>
+                        <p className="text-sm">"{swap.feedback}"</p>
+                      </div>
+                    )}
                   </CardContent>
                 </Card>
               ))

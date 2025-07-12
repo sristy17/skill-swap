@@ -1,18 +1,27 @@
-import { NavLink } from "react-router-dom";
+import { NavLink, Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { 
-  User, 
-  Search, 
-  MessageSquare, 
+import {
+  User,
+  Search,
+  MessageSquare,
   Settings,
   Home,
   Menu,
-  X
+  X,
+  LogOut,
 } from "lucide-react";
 import { useState } from "react";
+import { useAuth } from "../context/AuthContext";
 
 const Navigation = () => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const { isAuthenticated, signOut } = useAuth();
+  const navigate = useNavigate();
+
+  const handleSignOut = async () => {
+    await signOut();
+    navigate("/");
+  };
 
   const navItems = [
     { to: "/", icon: Home, label: "Dashboard" },
@@ -57,12 +66,21 @@ const Navigation = () => {
 
           {/* User Actions */}
           <div className="hidden md:flex items-center space-x-4">
-            <Button variant="outline" size="sm">
-              Sign In
-            </Button>
-            <Button variant="accent" size="sm">
-              Join Now
-            </Button>
+            {isAuthenticated ? (
+              <Button variant="outline" size="sm" onClick={handleSignOut}>
+                <LogOut className="h-4 w-4 mr-2" />
+                Sign Out
+              </Button>
+            ) : (
+              <>
+                <Button variant="outline" size="sm" asChild>
+                  <Link to="/login">Sign In</Link>
+                </Button>
+                <Button variant="accent" size="sm" asChild>
+                  <Link to="/signup">Join Now</Link>
+                </Button>
+              </>
+            )}
           </div>
 
           {/* Mobile menu button */}
@@ -72,7 +90,11 @@ const Navigation = () => {
               size="icon"
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
             >
-              {isMobileMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
+              {isMobileMenuOpen ? (
+                <X className="h-6 w-6" />
+              ) : (
+                <Menu className="h-6 w-6" />
+              )}
             </Button>
           </div>
         </div>
@@ -100,12 +122,21 @@ const Navigation = () => {
               </NavLink>
             ))}
             <div className="flex flex-col space-y-2 pt-4 px-3">
-              <Button variant="outline" size="sm">
-                Sign In
-              </Button>
-              <Button variant="accent" size="sm">
-                Join Now
-              </Button>
+              {isAuthenticated ? (
+                <Button variant="outline" size="sm" onClick={handleSignOut}>
+                  <LogOut className="h-4 w-4 mr-2" />
+                  Sign Out
+                </Button>
+              ) : (
+                <>
+                  <Button variant="outline" size="sm" asChild>
+                    <Link to="/login">Sign In</Link>
+                  </Button>
+                  <Button variant="accent" size="sm" asChild>
+                    <Link to="/signup">Join Now</Link>
+                  </Button>
+                </>
+              )}
             </div>
           </div>
         </div>
