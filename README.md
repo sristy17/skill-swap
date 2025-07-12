@@ -2,10 +2,6 @@
 
 A community-driven web application that empowers users to **offer** their skills and **request** new ones in return. Think of it as a barter system for learning — no money, just mutual growth.
 
-## 🌐 Live Project
-👉 [View Live](https://)
-
----
 
 ## 📌 Features
 
