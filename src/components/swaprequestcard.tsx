@@ -66,12 +66,12 @@ export default function SwapRequestCard({
               <Button onClick={onAccept} className="bg-green-600">
                 Accept
               </Button>
-              <Button onClick={onReject} variant="outline">
+              <Button onClick={onReject} variant="outline" className="bg-red-500 text-white">
                 Reject
               </Button>
             </>
           ) : (
-            <Button onClick={onCancel} variant="outline" className="border-red-500 text-red-400">
+            <Button onClick={onCancel} variant="outline" className="border-red-500 text-black">
               Cancel
             </Button>
           )}

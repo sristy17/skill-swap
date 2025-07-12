@@ -29,14 +29,6 @@ const mockRequests: SwapRequest[] = [
     status: "pending",
     isIncoming: false,
   },
-  {
-    id: "sr-003",
-    userName: "Ravi Kapoor",
-    offeredSkills: ["Excel", "Power BI"],
-    wantedSkills: ["Public Speaking"],
-    status: "accepted",
-    isIncoming: true,
-  },
 ];
 
 export default function SwapRequestsPage() {
@@ -44,7 +36,7 @@ export default function SwapRequestsPage() {
 
   const handleUpdateStatus = (id: string, newStatus: "accepted" | "rejected") => {
     setRequests((prev) =>
-      prev.map((req) => (req.id === id ? { ...req, status: newStatus } : req))
+      prev.map((req) => req.id === id ? { ...req, status: newStatus } : req)
     );
   };
 
@@ -70,12 +62,20 @@ export default function SwapRequestsPage() {
               status={req.status}
               isIncoming={req.isIncoming}
               onAccept={
-                req.isIncoming ? () => handleUpdateStatus(req.id, "accepted") : undefined
+                req.isIncoming && req.status === "pending"
+                  ? () => handleUpdateStatus(req.id, "accepted")
+                  : undefined
               }
               onReject={
-                req.isIncoming ? () => handleUpdateStatus(req.id, "rejected") : undefined
+                req.isIncoming && req.status === "pending"
+                  ? () => handleUpdateStatus(req.id, "rejected")
+                  : undefined
               }
-              onCancel={!req.isIncoming ? () => handleCancel(req.id) : undefined}
+              onCancel={
+                !req.isIncoming && req.status === "pending"
+                  ? () => handleCancel(req.id)
+                  : undefined
+              }
             />
           ))}
         </div>
